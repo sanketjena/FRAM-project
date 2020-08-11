@@ -1,0 +1,81 @@
+install.packages("tseries")
+install.packages("astsa")
+install.packages("ggplot2")
+install.packages("readr")
+install.packages("forecast")
+install.packages("FinTS")
+install.packages("quantmod")
+install.packages("BatchGetSymbols")
+install.packages("fGarch")
+install.packages("rugarch")
+install.packages("vars")
+
+library(tseries)
+library(ggplot2)
+library(readr)
+library(astsa)
+library(forecast)
+library(rugarch)
+library(FinTS)
+library(fGarch)
+library(vars)
+library(quantmod)
+library(BatchGetSymbols)
+
+sd<-as.Date("2015-04-01")                                                               #start date
+ed<-as.Date("2020-03-31")                                                               #end date
+a <- BatchGetSymbols("GRASIM.NS",first.date = sd,last.date = ed,freq.data = 'daily')    #Downloading 
+b <- BatchGetSymbols('GRASIM.NS',first.date = sd,last.date = ed,freq.data = 'weekly')    #data for  
+c <- BatchGetSymbols("GSPL.NS",first.date = sd,last.date = ed,freq.data = 'monthly')     #different 
+d <- BatchGetSymbols("^NSEI",first.date = sd,last.date = ed,freq.data = 'daily')         # stocks
+e <- BatchGetSymbols('^NSEI',first.date = sd,last.date = ed,freq.data = 'weekly')        #and 
+f <- BatchGetSymbols("^NSEI",first.date = sd,last.date = ed,freq.data = 'monthly')       #frequency
+x <- a$df.tickers                                                                        #assigning data 
+z <- d$df.tickers
+y<-x[-c(1:5),-c(1,2,3,5,6,7,8,9,10)]
+z<-z[,-c(1,2,3,5,6,7,8,9,10)]
+y<-na.omit(y)
+z<-na.omit(z)
+y=ts(y)
+z=ts(z)
+y=(diff(log(y)))*100                                                     #making return series
+z=(diff(log(z)))*100
+plot(y,ylab='Monthly returns',type='l')+title('Monthly return vs time')  #ploting returns on graph
+mean(y)                                                           #finding the mean of return series
+adf.test(y,alternative='stationary')                                #Augmented dickey fuller test
+acf(y)                                                            #finding ACF plot 
+pacf(y)                                                           #finding PACF plot
+acf2(y)                                                         
+arimamodel<-arima(y,order=c(0,0,0))                             #ARIMA modelling
+arimamodel
+tsdiag(arimamodel)                                              #diagnostic test for the arima model
+ARMAtoMA(ma=-0.2855,lag.max=5)                                  #converting arima to ma
+sarima.for(y,10,0,0,0)                                          #forecasting for arima model
+naive(y) 
+                                                       #prediction interval
+ArchTest(y)                                                     #test for arch effects
+a1<-garchFit(~garch(1,0), data = y, trace = F)    #arch(1) model can be treated as garch(1,0)
+summary(a1)                                       
+res<-a1@residuals/a1@sigma.t                      #assigning residuals
+acf2(res)                                         #plotting acf and pacf for residuals
+acf2(res^2)                                       #plotting acf and pacf for residual^2
+a2<-garchFit(~garch(1,1), data = y, trace = F)    #GARCH modelling
+summary(a2)                              
+res1<-a2@residuals/a2@sigma.t                     #assigning residuals
+acf2(res1)                                        #plotting acf and pacf for residuals
+acf2(res1^2)                                      #plotting acf and pacf for residual^2
+predict(a2,n.ahead=10)
+
+setwd()
+z<-read.csv("RiskFreeRate-Daily.csv")
+z<-z[,-c(1,2,3,4,5,7)]
+
+g=cbind(y,z)
+plot.ts(g,main='returns of JSWENERGY(y) and Market(z)')
+VARselect(g,lag.max=8,type="const")[["selection"]]
+varmod<-VAR(g,p=6,type='both')
+summary(varmod)
+acf(residuals(varmod)[,1])
+serial.test(varmod,lags.pt=10,type='PT.asymptotic')
+forecast(varmod)
+autoplot(forecast(varmod))
